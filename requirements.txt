@@ -1,0 +1,7 @@
+fastapi
+openai
+pydantic
+uvicorn
+fitz
+Pillow
+PyMuPDF

@@ -14,6 +14,7 @@ def llm(content,prompt,model="doubao-seed-1-6-flash-250828"):
     response = client.chat.completions.create(
         model=model,
         messages=messages,
+        response_format={"type": "json_object"}
     )
 
     return response.choices[0].message.content

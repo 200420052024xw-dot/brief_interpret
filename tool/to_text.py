@@ -26,9 +26,9 @@ def to_content_text(pdf_path, max_work=10):
 
     content= "最终输出 **必须为 JSON 格式**，且不能修改键值"+content+"最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！"
 
-    with open("Document\\content.txt","w",encoding="utf-8") as co:
+    with open("test\\test_content.txt","w",encoding="utf-8") as co:
         co.write(content)
-    print("已经成功将内容保存到content.txt")
+    print("已经成功将内容保存到test_content.txt")
 
     print("已经成功读取PDF全部内容！")
 

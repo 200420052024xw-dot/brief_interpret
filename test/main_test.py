@@ -1,14 +1,14 @@
 from tool.delete import clean_images, clean_file
 from tool.to_text import to_content_text
+import prompt.prompt as pr
 from API.interpret_doubao import llm
 from pydantic import BaseModel
 from fastapi import FastAPI
-import prompt.prompt as pr
-import requests
 import asyncio
 import os,json
 import hashlib
 import uvicorn
+import re
 
 app = FastAPI()
 
@@ -16,46 +16,17 @@ class FileInformation(BaseModel):
     file_path: str
     max_work: int = 3
 
+def extract_section(text, section_name):
+    """根据标题提取段落内容"""
+    pattern = rf"{section_name}[:：]\s*(.*?)(?=\n\S+:|$)"
+    match = re.search(pattern, text, re.S)
+    return match.group(1).strip() if match else ""
+
 @app.post('/pdf_collate')
 async def pdf_interpret(user: FileInformation):
-    file_path = user.file_path
 
-    # 确保Document文件夹存在
-    file_folder = "Document"
-    os.makedirs(file_folder, exist_ok=True)
-
-    #默认数据类型为PDF
-    file_type="pdf"
-
-    # 判断是否是 URL
-    if file_path.startswith("http://") or file_path.startswith("https://"):
-        response = requests.get(file_path, stream=True)
-
-        if response.status_code != 200:
-            raise FileNotFoundError(f"无法下载文件: {file_path}")
-
-        #获取文件类型
-        file_type=os.path.splitext(file_path)[1].lower().split(".")[1]
-        print(f"文件类型：{file_type}")
-
-        # 使用 URL 的 MD5 生成安全文件名
-        url_hash = hashlib.md5(file_path.encode("utf-8")).hexdigest()
-        filename = f"{url_hash}.{file_type}"
-        tmp_path = os.path.join(file_folder, filename)
-
-        # 保存文件
-        with open(tmp_path, "wb") as tmp_file:
-            for chunk in response.iter_content(chunk_size=8192):
-                tmp_file.write(chunk)
-        file_path = tmp_path
-        print("已经成功保存文件！")
-
-    # 本地文件不存在报错
-    elif not os.path.exists(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-
-    # PDF -> 文本
-    content, page_count = to_content_text(file_path, user.max_work)
+    with open("test_content.txt","r",encoding="utf-8") as pd:
+        content=pd.read()
 
     # 调用 LLM
     file_collate_xuanhao, file_collate_create = await asyncio.gather(

@@ -1,6 +1,6 @@
 from tool.delete import clean_images, clean_file
 from tool.to_text import to_content_text
-from API.interpret_doubao import llm
+from API.interpret_doubao import llm_json
 from pydantic import BaseModel
 from fastapi import FastAPI
 import prompt.prompt as pr
@@ -21,7 +21,7 @@ async def pdf_interpret(user: FileInformation):
     file_path = user.file_path
 
     # 确保Document文件夹存在
-    file_folder = "Document"
+    file_folder = "./Document"
     os.makedirs(file_folder, exist_ok=True)
 
     #默认数据类型为PDF
@@ -55,12 +55,15 @@ async def pdf_interpret(user: FileInformation):
         raise FileNotFoundError(f"文件不存在: {file_path}")
 
     # PDF -> 文本
-    content, page_count = to_content_text(file_path, user.max_work)
+    content, product_type, page_count = await to_content_text(file_path, user.max_work)
+
+    clean_images("images")
+    clean_file("./Document")
 
     # 调用 LLM
     file_collate_xuanhao, file_collate_create = await asyncio.gather(
-        asyncio.to_thread(llm, "最终输出 **必须为 JSON 格式**，且不能修改键值"+content+"最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！", pr.prompt_xuanhao),
-        asyncio.to_thread(llm, "最终输出 **必须为 JSON 格式**，且不能修改键值"+content+"最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！", pr.prompt_create)
+        asyncio.to_thread(llm_json, "最终输出 **必须为 JSON 格式**，且不能修改键值" + content + "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！", pr.prompt_xuanhao),
+        asyncio.to_thread(llm_json, "最终输出 **必须为 JSON 格式**，且不能修改键值" + content + "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！", pr.prompt_create)
     )
 
     print(f"解读选号需求：{file_collate_xuanhao}", flush=True)
@@ -69,15 +72,12 @@ async def pdf_interpret(user: FileInformation):
     file_collate_xuanhao = json.loads(file_collate_xuanhao)
     file_collate_create = json.loads(file_collate_create)
 
-    # 构造 result 保持原格式
-
-    # 清理临时文件
-    clean_images("images")
-    clean_file("Document")
 
     return {
         "selection_requirements":file_collate_xuanhao,
-        "create_requirements":file_collate_create}
+        "create_requirements":file_collate_create,
+        "production_type":product_type
+    }
 
 if __name__ == '__main__':
     uvicorn.run(f'{os.path.basename(__file__).split(".")[0]}:app', host='0.0.0.0', port=8845, reload=True)

@@ -50,6 +50,6 @@ def to_image_url(pdf_path, max_work=10, dpi=100):
     with ThreadPoolExecutor(max_workers=max_work) as executor:
         futures = [executor.submit(pdf_to_image, pdf_path, i, "images", dpi) for i in range(page_count)]
         for i, future in enumerate(futures):
-            images_url[i] = future.result()  # 即使某页失败也不会报 IndexError
+            images_url[i] = future.result()
 
     return images_url, page_count

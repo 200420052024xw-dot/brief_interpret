@@ -1,11 +1,27 @@
+# 核心框架
+fastapi==0.118.0
+uvicorn==0.37.0
+pydantic==2.11.9
+
+# AI模型相关
+openai==2.0.1
+
+# 文档处理
 aspose_slides==25.9.0
 docx2pdf==0.1.8
-excel2img==1.4.0
-fastapi==0.118.0
-fitz==0.0.1.dev2
-openai==2.0.1
+python-docx==1.1.2
 pandas==2.3.3
+excel2img==1.4.0
+
+# PDF处理
+PyMuPDF==1.24.12
+
+# 图像处理
 Pillow==11.3.0
-pydantic==2.11.9
-Requests==2.32.5
-uvicorn==0.37.0
+matplotlib==3.9.2
+
+# HTTP请求
+requests==2.32.5
+
+# 其他工具
+python-multipart==0.0.12

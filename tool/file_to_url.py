@@ -1,18 +1,19 @@
+from __future__ import print_function
+import time
+# import cloudmersive_convert_api_client
+# from cloudmersive_convert_api_client.rest import ApiException
+from pprint import pprint
 from concurrent.futures import ThreadPoolExecutor
-from PIL import Image, ImageDraw, ImageFont
-import matplotlib.pyplot as plt
 import aspose.slides as slides
 from docx2pdf import convert
-from docx import Document
-from pathlib import Path
 from PIL import Image
 import pandas as pd
-import subprocess
 import excel2img
 import hashlib
 import base64
 import fitz
 import os
+
 
 # 将图片文件转为 data URL
 def image_to_data_url(image_path: str, mime_type: str = "image/png") -> str:
@@ -80,80 +81,67 @@ def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     images_url, page_count = pdf_to_url(output_file, max_work)
     return images_url, page_count
 
-def excel_to_url(excel_path, max_work=5):
-    """
-    Excel 转 PDF 再转图片 data URL，兼容 Linux 云端和本地。
-    保留原始排版、单元格位置、图片和格式。
-    """
-    output_dir = "./Document"
-    os.makedirs(output_dir, exist_ok=True)
+# def excel_to_url(excel_path,max_work):
+#     # Configure API key authorization: Apikey
+#     configuration = cloudmersive_convert_api_client.Configuration()
+#     configuration.api_key['Apikey'] = 'YOUR_API_KEY'
+#     # Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+#     # configuration.api_key_prefix['Apikey'] = 'Bearer'
+#
+#     # create an instance of the API class
+#     api_instance = cloudmersive_convert_api_client.ConvertDocumentApi(
+#         cloudmersive_convert_api_client.ApiClient(configuration))
+#     input_file = '/path/to/file.txt'  # file | Input file to perform the operation on.
+#
+#     try:
+#         # Convert Document to PDF
+#         api_response = api_instance.convert_document_autodetect_to_pdf(input_file)
+#         pprint(api_response)
+#     except ApiException as e:
+#         print("Exception when calling ConvertDocumentApi->convert_document_autodetect_to_pdf: %s\n" % e)
 
-    # 生成 PDF 文件路径
-    pdf_filename = Path(excel_path).stem + ".pdf"
-    pdf_path = os.path.join(output_dir, pdf_filename)
+def excel_to_url(excel_path,max_work):
 
-    try:
-        if os.name == "nt" and "excel2img" in globals():
-            # Windows 本地可用 excel2img（保留图片和格式）
-            import excel2img
-            output_dir_img = "./Images"
-            os.makedirs(output_dir_img, exist_ok=True)
-            excel_file = pd.ExcelFile(excel_path)
-            sheet_names = excel_file.sheet_names
-            images_url = []
-            page_count = 0
-            for sheet in sheet_names:
-                safe_sheet_name = sheet.replace("/", "_")
-                image_path = os.path.join(output_dir_img, f"{safe_sheet_name}.png")
-                excel2img.export_img(excel_path, image_path)
-                images_url.append(image_to_data_url(image_path))
-                page_count += 1
-            return images_url, page_count
-        else:
-            # Linux / 云端：使用 LibreOffice 转 PDF
-            subprocess.run([
-                "libreoffice", "--headless", "--convert-to", "pdf",
-                excel_path, "--outdir", output_dir
-            ], check=True)
-    except Exception as e:
-        print("Excel 转 PDF 失败:", e)
-        return [], 0
+    excel_file = pd.ExcelFile(excel_path)
+    sheet_name = excel_file.sheet_names
 
-    # PDF → 图片 data URL
-    return pdf_to_url(pdf_path, max_work)
-
-def word_to_url(word_path, max_work=5):
-    """
-    将 Word 文档每页或每段文本转为图片并返回 data URL 列表
-    """
     output_dir = "./Images"
     os.makedirs(output_dir, exist_ok=True)
 
-    doc = Document(word_path)
-    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    page_count=0
+    images_url=[]
 
-    images_url = []
-    page_count = 0
-    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"  # Linux 常用字体路径
-    font = ImageFont.truetype(font_path, 16)
+    try:
+        print("截图中，请等待...")
+        for sheet in sheet_name:
+            safe_sheet_name = sheet.replace("/", "_").replace("\\", "_")
+            image_path = f"{output_dir}/{safe_sheet_name}.png"
+            excel2img.export_img(excel_path, image_path)
+            images_url.append(image_to_data_url(image_path))
+            page_count += 1
+        print("截图完成！共处理", page_count, "个 sheet。")
+    except Exception as e:
+        page_count=0
+        print("截图失败！", e)
 
-    for i, para in enumerate(paragraphs):
-        lines = para.split('\n')
-        width = 800
-        height = max(50, 20 * len(lines))
+    return  images_url,page_count
 
-        img = Image.new("RGB", (width, height), color="white")
-        draw = ImageDraw.Draw(img)
-        y_text = 0
-        for line in lines:
-            draw.text((10, y_text), line, font=font, fill="black")
-            y_text += 20
+def word_to_url(word_path,max_work):
+    #将word转化为pdf
+    output_dir="./Document"
+    os.makedirs(output_dir, exist_ok=True)
 
-        image_path = os.path.join(output_dir, f"paragraph_{i+1}.png")
-        img.save(image_path)
-        images_url.append(image_to_data_url(image_path))
-        page_count += 1
+    # 生成文件名称
+    url_hash = hashlib.md5(word_path.encode("utf-8")).hexdigest()
+    filename = f"{url_hash}.pdf"
+    pdf_path = os.path.join(output_dir, filename)
 
-    return images_url, page_count
+    # 进行转化
+    convert(word_path, pdf_path)
+
+    image_url,page_count = pdf_to_url(pdf_path,max_work)
+
+    return image_url,page_count
+
 
 

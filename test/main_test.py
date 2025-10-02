@@ -1,66 +1,64 @@
-from tool.delete_file_image import clean_images, clean_file
-from tool.url_to_file import save_file
-from tool.url_to_text import url_to_text
-from API.text_doubao import llm_json,llm
-from pydantic import BaseModel
-from fastapi import FastAPI
-import prompt.prompt as pr
-import asyncio
-import os,json
-import uvicorn
+import requests
+import os
 
-app = FastAPI()
-
-class FileInformation(BaseModel):
-    file_path: str
-    max_work: int = 3
-
-@app.post('/file_collate')
-async def file_interpret(user: FileInformation):
-
-    # 保存文件，并给出路径和文件类型
-    file_path,file_type = save_file(user.file_path)
-
-    # PDF->文本
-    if file_type == "txt":
-        with open(file_path,"r",encoding="utf-8") as txt:
-            content=txt.read()
-            print(content)
-        product_type = llm(content,pr.prompt_production)
-        print(f"产品品类：{product_type}")
-    else:
-        content= await url_to_text(file_path,file_type,user.max_work)
-        product_type=content[1]
-        content=content[0]
-
-    # 清除文件
-    clean_images("Images")
-    clean_file("./Document")
-
-    # 调用LLM 进行分析
-    file_collate_selection, file_collate_create,file_collate_elegance= await asyncio.gather(
-        asyncio.to_thread(llm_json, "最终输出 **必须为 JSON 格式**，且不能修改键值" + content + "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！", pr.prompt_selection),
-        asyncio.to_thread(llm_json, "最终输出 **必须为 JSON 格式**，且不能修改键值" + content + "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！", pr.prompt_create),
-        asyncio.to_thread(llm,content[0],pr.prompt_elegance)
-    )
-
-    print(f"解读选号需求：{file_collate_selection}", flush=True)
-    print(f"解读创作需求：{file_collate_create}", flush=True)
-    print(f"创作排版要求：{file_collate_elegance}",flush=True)
-
-    # 转变为json格式
-    file_collate_selection = json.loads(file_collate_selection)
-    file_collate_create = json.loads(file_collate_create)
-
-    # 编辑结果
-    result={
-        "production_type": product_type,
-        "selection_requirements":file_collate_selection,
-        "create_requirements":file_collate_create,
-        "create_elegance":file_collate_elegance
+def get_access_token(tenant_id: str, client_id: str, client_secret: str) -> str:
+    """
+    获取 Microsoft Graph API access_token
+    """
+    url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scope": "https://graph.microsoft.com/.default"
     }
+    r = requests.post(url, data=data)
+    if r.status_code != 200:
+        raise Exception(f"获取 access_token 失败: {r.status_code} {r.text}")
+    return r.json().get("access_token")
 
-    return result
 
-if __name__ == '__main__':
-    uvicorn.run(f'{os.path.basename(__file__).split(".")[0]}:app', host='0.0.0.0', port=8845, reload=True)
+def word_to_pdf_ms_graph(input_path: str, output_path: str, access_token: str):
+    """
+    使用 Microsoft Graph API 将 Word 文件转换为 PDF 并保存。
+    """
+    filename = os.path.basename(input_path)
+
+    # 上传 Word 文件到 OneDrive 根目录
+    upload_url = f"https://graph.microsoft.com/v1.0/me/drive/root:/{filename}:/content"
+    with open(input_path, "rb") as f:
+        response = requests.put(upload_url, headers={"Authorization": f"Bearer {access_token}"}, data=f)
+
+    if response.status_code not in (200, 201):
+        raise Exception(f"上传文件失败: {response.status_code} {response.text}")
+
+    file_id = response.json()["id"]
+
+    # 下载 PDF
+    download_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content?format=pdf"
+    pdf_response = requests.get(download_url, headers={"Authorization": f"Bearer {access_token}"})
+
+    if pdf_response.status_code != 200:
+        raise Exception(f"转换 PDF 失败: {pdf_response.status_code} {pdf_response.text}")
+
+    with open(output_path, "wb") as f:
+        f.write(pdf_response.content)
+
+    print(f"✅ PDF 已保存到: {output_path}")
+
+
+if __name__ == "__main__":
+    # 替换成你自己的 Azure 应用信息
+    tenant_id = "YOUR_TENANT_ID"
+    client_id = "YOUR_CLIENT_ID"
+    client_secret = "YOUR_CLIENT_SECRET"
+
+    # 输入和输出文件
+    word_file = "example.docx"   # 需要转换的 Word 文件
+    pdf_file = "example.pdf"     # 输出的 PDF 文件
+
+    # 获取 Token
+    token = get_access_token(tenant_id, client_id, client_secret)
+
+    # Word 转 PDF
+    word_to_pdf_ms_graph(word_file, pdf_file, token)

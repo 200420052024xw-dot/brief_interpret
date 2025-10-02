@@ -13,10 +13,12 @@ app = FastAPI()
 
 class FileInformation(BaseModel):
     file_path: str
-    max_work: int = 3
+    max_work : int=5
 
 @app.post('/file_collate')
 async def file_interpret(user: FileInformation):
+
+
 
     # 保存文件，并给出路径和文件类型
     file_path,file_type = save_file(user.file_path)
@@ -35,10 +37,20 @@ async def file_interpret(user: FileInformation):
             print(content)
 
     # 调用LLM 进行分析
-    file_collate_selection, file_collate_create,file_collate_elegance= await asyncio.gather(
-        asyncio.to_thread(llm_json, "最终输出 **必须为 JSON 格式**，且不能修改键值" + content + "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！", pr.prompt_selection),
-        asyncio.to_thread(llm_json, "最终输出 **必须为 JSON 格式**，且不能修改键值" + content + "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！", pr.prompt_create),
-        asyncio.to_thread(llm,content[0],pr.prompt_elegance)
+    file_collate_selection, file_collate_create, file_collate_elegance = await asyncio.gather(
+        llm_json(
+            "最终输出 **必须为 JSON 格式**，且不能修改键值"
+            + content +
+            "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！",
+            pr.prompt_selection
+        ),
+        llm_json(
+            "最终输出 **必须为 JSON 格式**，且不能修改键值"
+            + content +
+            "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！",
+            pr.prompt_create
+        ),
+        llm(content, pr.prompt_elegance)
     )
 
     print(f"解读选号需求：{file_collate_selection}", flush=True)

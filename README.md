@@ -1,137 +1,264 @@
-# brief_interpret
+# Brief Interpret - 智能文档解读服务
 
-一个基于 FastAPI 的 PDF 智能解读服务：
-- 将 PDF 按页渲染为图片
-- 使用 Doubao 视觉模型识别页面文字并保持结构
-- 汇总全文并交给 Doubao 文本模型，生成“产品营销解读”结构化输出
+一个基于 FastAPI 的多格式文档智能解读服务：
+- 支持 PDF、Word、Excel、PPT 等多种文档格式
+- 将文档转换为图片，使用豆包视觉模型识别文字内容
+- 使用豆包文本模型进行结构化分析，生成产品营销解读报告
+- 提供完整的选号需求、创作需求和排版要求的分析
 
 ---
 
 ## 功能特性
-- **并行处理**：多线程将 PDF 页面并行转图、并行识别，显著加速。
-- **结构化抽取**：输出遵循“产品信息/主要卖点/次要卖点/其他信息”的固定结构。
-- **简单调用**：提供一个 POST 接口 `/pdf_collate`，输入本地 PDF 路径即可。
+- **多格式支持**：支持 PDF、Word(.docx/.doc)、Excel(.xlsx)、PowerPoint(.pptx) 等格式
+- **并行处理**：多线程将文档页面并行转图、并行识别，显著提升处理速度
+- **智能分析**：基于豆包大模型进行产品品类识别、选号需求分析、创作需求提取
+- **结构化输出**：生成标准化的 JSON 格式分析结果
+- **云端兼容**：支持本地文件和 URL 链接两种输入方式
 
 ## 目录结构
 ```
 brief_interpret/
   ├─ API/
-  │  ├─ text_doubao.py     # 文本 LLM（Doubao）调用
-  │  └─ vision_doubao.py        # 视觉 LLM（Doubao）调用
+  │  ├─ text_doubao.py         # 豆包文本模型调用
+  │  └─ vision_doubao.py       # 豆包视觉模型调用
   ├─ tool/
-  │  ├─ image_to_url.py         # PDF→图片（JPG）并转 Data URL
-  │  ├─ image_to_text.py        # 并行调用视觉模型抽取文字
-  │  └─ delete_file_iamge.py    # 清理临时图片
-      
-  ├─ images/                    # 页面图片缓存目录（运行时生成）
-  ├─ main.py                    # FastAPI 入口
-  └─ README.md
+  │  ├─ file_to_url.py         # 文档转图片并生成 Data URL
+  │  ├─ url_to_file.py         # 文件下载和保存
+  │  ├─ url_to_text.py         # 并行调用视觉模型提取文字
+  │  └─ delete_file_image.py   # 清理临时文件和图片
+  ├─ prompt/
+  │  ├─ prompt.py              # 提示词模板
+  │  ├─ prompt_selection.txt   # 选号需求提示词
+  │  └─ prompt_create          # 创作需求提示词
+  ├─ Document/                 # 临时文档存储目录
+  ├─ Images/                   # 临时图片缓存目录
+  ├─ main.py                   # FastAPI 服务入口
+  ├─ requirements.txt          # 依赖包列表
+  └─ README.md                 # 项目说明文档
 ```
 
 ## 环境要求
 - Python 3.9+（建议 3.10/3.11）
-- 系统可正常安装下列依赖
+- 操作系统：Windows、Linux、macOS
+- 内存：建议 4GB 以上
+- 磁盘空间：至少 1GB 可用空间
 
-建议创建虚拟环境：
+### 安装依赖
+
+1. 创建虚拟环境（推荐）：
 ```bash
 python -m venv .venv
-# Windows PowerShell
-. .venv\Scripts\Activate.ps1
-# 或 CMD
-.venv\Scripts\activate.bat
+
+# Windows
+.venv\Scripts\activate
+
+# Linux/macOS
+source .venv/bin/activate
 ```
 
-安装依赖（示例）：
+2. 安装项目依赖：
 ```bash
-pip install fastapi uvicorn pydantic openai pillow pymupdf
+pip install -r requirements.txt
 ```
-> 说明：
-> - 本项目使用 `openai` 官方 SDK 直连火山方舟（Volcengine Ark）Doubao 模型，走自定义 `base_url`。
-> - `pymupdf` 对应包名为 `pymupdf`，导入名为 `fitz`。
 
-## 模型与 API 配置
-本项目默认在以下两个文件里直接使用了明文 `api_key`：
-- `API/interpret_doubao.py`
+3. 额外系统依赖（Linux/macOS）：
+```bash
+# 安装 LibreOffice（用于 Excel 转换）
+sudo apt-get install libreoffice  # Ubuntu/Debian
+# 或
+brew install libreoffice  # macOS
+```
+
+> **说明**：
+> - 本项目使用 `openai` 官方 SDK 直连火山方舟（Volcengine Ark）豆包模型
+> - Windows 系统支持 excel2img 进行高质量 Excel 转换
+> - Linux/macOS 系统使用 LibreOffice 进行 Excel 转换
+
+## API 配置
+
+### 豆包 API 配置
+项目使用火山方舟（Volcengine Ark）豆包模型，需要在以下文件中配置 API Key：
+- `API/text_doubao.py`
 - `API/vision_doubao.py`
 
-请将其中的 `api_key="..."` 替换为你自己的火山方舟 Doubao API Key。
-```startLine:endLine:API/interpret_doubao.py
-client = OpenAI(
-    base_url="https://ark.cn-beijing.volces.com/api/v3",
-    api_key="<替换为你的 API Key>"
-)
-```
-```startLine:endLine:API/vision_doubao.py
+请将文件中的 `api_key="..."` 替换为你自己的火山方舟 API Key：
+
+```python
 client = OpenAI(
     base_url="https://ark.cn-beijing.volces.com/api/v3",
     api_key="<替换为你的 API Key>"
 )
 ```
 
-> 更安全的做法是将 Key 放入环境变量并在代码里读取，但当前仓库并未实现环境变量读取逻辑，如需改造可自行在上述文件中读取 `os.environ["ARK_API_KEY"]`。
+### 使用的模型
+- **视觉识别**：`doubao-seed-1-6-flash-250828`
+- **文本分析**：`doubao-seed-1-6-flash-250828`
 
-使用的模型（可按需替换）：
-- 视觉识别：`doubao-1-5-thinking-vision-pro-250428`
-- 文本解读：`doubao-seed-1-6-250615`
+### 安全建议
+> **重要**：当前代码中 API Key 为明文存储，仅用于演示。生产环境中建议：
+> 1. 使用环境变量存储 API Key
+> 2. 避免将包含 API Key 的代码提交到公共仓库
+> 3. 定期轮换 API Key
 
 ## 启动服务
-直接运行：
+
 ```bash
 python main.py
 ```
-默认监听：`http://127.0.0.1:8000`
 
-## 接口说明
-### POST /pdf_collate
-- **入参（JSON）**：
-  - `pdf_path`：本地 PDF 文件路径（必填）
-  - `max_work`：并行线程数（可选，默认 3；在 `tool/to_text.py` 内部默认使用到 7）
-- **返回**：字符串，Doubao 文本模型基于全文提炼的“产品营销解读”。
+服务启动后默认监听：`http://0.0.0.0:8845`
 
-#### 示例请求（curl）
-```bash
-curl -X POST "http://127.0.0.1:8000/pdf_collate" \
-  -H "Content-Type: application/json" \
-  -d "{\"pdf_path\": \"C:/path/to/your.pdf\", \"max_work\": 4}"
+## API 接口
+
+### POST /file_collate
+智能文档解读接口，支持多种文档格式分析。
+
+#### 请求参数
+- `file_path`（string，必填）：文档文件路径或 URL
+  - 支持本地文件路径：`C:/path/to/document.pdf`
+  - 支持 HTTP/HTTPS URL：`https://example.com/document.pdf`
+- `max_work`（int，可选）：并行处理线程数，默认 3
+
+#### 支持的文件格式
+- PDF 文件（.pdf）
+- Word 文档（.docx, .doc）
+- Excel 表格（.xlsx）
+- PowerPoint 演示文稿（.pptx）
+- 纯文本文件（.txt）
+
+#### 响应格式
+```json
+{
+  "production_type": "产品品类编号（000-005）",
+  "selection_requirements": {
+    "产品基础信息": {...},
+    "合作情况": {...},
+    "目标人群/粉丝画像": {...},
+    "竞品信息": {...},
+    "其他要求": {...}
+  },
+  "create_requirements": {
+    "产品基础信息": {...},
+    "卖点信息": {...},
+    "创作方向": [...],
+    "创作注意事项": [...]
+  },
+  "create_elegance": "排版风格要求"
+}
 ```
 
-#### 示例请求（Python）
+#### 示例请求
+
+**cURL 示例**：
+```bash
+curl -X POST "http://127.0.0.1:8845/file_collate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "file_path": "C:/path/to/brief.pdf",
+    "max_work": 5
+  }'
+```
+
+**Python 示例**：
 ```python
 import requests
 
-url = "http://127.0.0.1:8000/pdf_collate"
+url = "http://127.0.0.1:8845/file_collate"
 payload = {
-    "pdf_path": r"C:/path/to/your.pdf",
-    "max_work": 4,
+    "file_path": r"C:/path/to/brief.pdf",
+    "max_work": 5
 }
-resp = requests.post(url, json=payload, timeout=600)
-print(resp.text)
+
+response = requests.post(url, json=payload, timeout=600)
+result = response.json()
+print(result)
 ```
 
-## 工作流程简介
-1. `tool/to_image_data_url.py`：使用 `pymupdf` 将 PDF 每页渲染为 JPG，存入 `images/`，并转为 Data URL。
-2. `tool/to_text.py`：并行调用视觉模型 `pdf_read()` 提取每页文本，合并成全文。
-3. `API/interpret_doubao.py`：将全文交给文本模型，根据预设 Prompt 生成结构化“产品解读”。
-4. `tool/delete.py`：接口返回后清理 `images/` 下的临时图片。
+## 工作流程
 
-## 参数与性能建议
-- `max_work`：并行度。CPU/内存/网速越强，可适当调大；一般 3~8 区间。
-- `dpi`（在 `to_image_data_url.pdf_to_image` 中）：默认 100。更高 DPI 提升识别质量但会变慢、占用更多内存与带宽。
-- `quality`（JPG 质量）：在可接受清晰度下尽量降低以加速上传。
+1. **文件处理**：`tool/url_to_file.py` 处理输入文件（本地文件或 URL 下载）
+2. **格式转换**：`tool/file_to_url.py` 将文档转换为图片格式
+   - PDF：使用 PyMuPDF 逐页渲染为图片
+   - Word：转换为图片或直接读取文本
+   - Excel：Windows 使用 excel2img，Linux/macOS 使用 LibreOffice
+   - PPT：使用 Aspose.Slides 转换为 PDF 再转图片
+3. **文字识别**：`tool/url_to_text.py` 并行调用豆包视觉模型提取文字内容
+4. **智能分析**：`API/text_doubao.py` 使用豆包文本模型进行结构化分析
+   - 产品品类识别
+   - 选号需求分析
+   - 创作需求提取
+   - 排版风格判断
+5. **结果返回**：返回标准化的 JSON 格式分析结果
+6. **清理资源**：`tool/delete_file_image.py` 清理临时文件和图片
 
-## 常见问题（FAQ）
-- 报错 `FileNotFoundError: PDF 文件不存在`：
-  - 确认 `pdf_path` 为本地绝对路径，Windows 请使用 `C:/...` 或 `D:/...` 格式，或在字符串前加 `r"..."` 防止转义。
-- 图片未清理或 `images/` 体积变大：
-  - 接口正常返回后会调用清理；若异常中断，可手动删除 `images/` 下的 `*.jpg`。
-- 模型调用超时/失败：
-  - 检查网络，确认 Doubao Key 正确且有足够配额；适当降低 `max_work`。
-- 识别质量不佳：
-  - 提高 `dpi` 与 `quality`；确保 PDF 本身清晰。
+## 性能优化建议
 
-## 安全与合规
-- 当前仓库中 `API/interpret_doubao.py`、`API/vision_doubao.py` 含有明文 Key，仅用于本地演示，请务必替换为你自己的 Key，并避免提交到公共仓库。
-- 输出内容应严格来源于原文件，Prompt 已限制杜撰；在重要场景中请人工复核。
+### 参数调优
+- **`max_work`**：并行线程数，建议 3-8，根据服务器性能调整
+  - CPU 核心数多、内存充足：可设置 5-8
+  - 内存有限：建议设置 3-5
+- **`dpi`**：图片分辨率，默认 100
+  - 提高 DPI 可提升识别质量，但会增加处理时间和内存占用
+  - 建议范围：100-200
+- **文件大小**：建议单个文件不超过 50MB
+
+### 系统优化
+- 确保有足够的磁盘空间用于临时文件存储
+- 定期清理 `Document/` 和 `Images/` 目录
+- 监控内存使用情况，避免内存溢出
+
+## 常见问题
+
+### Q: 文件处理失败
+**A**: 检查以下项目：
+- 文件路径是否正确（支持绝对路径和 URL）
+- 文件格式是否受支持
+- 文件是否损坏或加密
+- 磁盘空间是否充足
+
+### Q: API 调用超时
+**A**: 可能的原因和解决方案：
+- 网络连接问题：检查网络状况
+- API Key 无效：确认火山方舟 API Key 正确且有足够配额
+- 文件过大：减小文件大小或降低 `max_work` 参数
+- 服务器性能不足：增加内存或降低并行度
+
+### Q: 识别质量不佳
+**A**: 优化建议：
+- 确保原文档清晰度高
+- 提高 `dpi` 参数（在 `file_to_url.py` 中）
+- 检查文档是否为扫描件（扫描件识别效果更好）
+
+### Q: 临时文件未清理
+**A**: 
+- 正常情况下接口返回后会自动清理
+- 异常中断时可手动删除 `Document/` 和 `Images/` 目录下的文件
+- 建议定期清理临时目录
+
+## 安全注意事项
+
+1. **API Key 安全**：
+   - 生产环境请使用环境变量存储 API Key
+   - 不要将包含 API Key 的代码提交到公共仓库
+   - 定期轮换 API Key
+
+2. **文件安全**：
+   - 处理敏感文档时注意数据保护
+   - 临时文件会自动清理，但仍需注意服务器安全
+   - 建议在受信任的网络环境中运行
+
+3. **输出内容**：
+   - AI 分析结果仅供参考，重要决策请人工复核
+   - 输出内容基于输入文档，请确保文档来源可靠
+
+## 技术支持
+
+如遇到问题，请检查：
+1. Python 版本是否符合要求
+2. 依赖包是否正确安装
+3. API Key 配置是否正确
+4. 网络连接是否正常
 
 ## 许可证
-未声明许可证（如需开源分发，请补充 LICENSE 并相应更新本文件）。
+
+本项目仅供学习和研究使用。商业使用请遵守相关法律法规和 API 服务条款。

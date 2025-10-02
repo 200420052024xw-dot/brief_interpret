@@ -16,12 +16,13 @@
 ```
 brief_interpret/
   ├─ API/
-  │  ├─ interpret_doubao.py     # 文本 LLM（Doubao）调用
+  │  ├─ text_doubao.py     # 文本 LLM（Doubao）调用
   │  └─ vision_doubao.py        # 视觉 LLM（Doubao）调用
   ├─ tool/
-  │  ├─ to_image_data_url.py    # PDF→图片（JPG）并转 Data URL
-  │  ├─ to_text.py              # 并行调用视觉模型抽取文字
-  │  └─ delete.py               # 清理临时图片
+  │  ├─ image_to_url.py         # PDF→图片（JPG）并转 Data URL
+  │  ├─ image_to_text.py        # 并行调用视觉模型抽取文字
+  │  └─ delete_file_iamge.py    # 清理临时图片
+      
   ├─ images/                    # 页面图片缓存目录（运行时生成）
   ├─ main.py                    # FastAPI 入口
   └─ README.md

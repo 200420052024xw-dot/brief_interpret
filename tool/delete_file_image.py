@@ -2,6 +2,7 @@ import shutil
 import glob
 import os
 
+# 删除图片
 def clean_images(folder: str = "./"):
     """删除指定目录下的 png/jpg/jpeg 图片"""
     for ext in ["*.png", "*.jpg", "*.jpeg"]:
@@ -12,6 +13,7 @@ def clean_images(folder: str = "./"):
             except Exception as e:
                 print(f"删除失败 {file}: {e}")
 
+# 删除临时文件
 def clean_file(folder_path: str):
     """删除指定文件夹下的所有内容（文件 + 子文件夹），但保留文件夹本身"""
     for filename in os.listdir(folder_path):

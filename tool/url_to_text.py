@@ -1,65 +1,62 @@
 import asyncio
-import re
-from API.vision_doubao import pdf_read
-from API.text_doubao import llm
-import prompt.prompt as pr
-from tool.file_to_url import pdf_to_url, ppt_to_url
+from API.vision_doubao import image_read
+from tool.file_to_url import pdf_to_url, ppt_to_url, word_to_url, excel_to_url
 
 
 async def url_to_text(file_path, file_type, max_work=10):
-    # 判断文件类型
+
+    # 判断文件类型,采用不同的方法转化为图片
     if file_type == "pdf":
         image_results, page_count = pdf_to_url(file_path, max_work)
         print("已经处理完PDF文件！")
     elif file_type == "pptx":
         image_results, page_count = ppt_to_url(file_path, max_work)
         print("已经处理完PPT文件！")
+    elif file_type in ["doc", "docx"]:
+        image_results, page_count = word_to_url(file_path, max_work)
+    elif file_type in ["xls", "xlsx"]:
+        image_results, page_count = excel_to_url(file_path, max_work)
     else:
-        return "文件格式不支持！"
+        return f"文件格式不支持！{{文件类型：{file_type}}}"
 
-    pdf_texts = [None] * len(image_results)
+    brief_content = [None] * len(image_results)
     completed_count = 0
-    production_task = None
+    production_type = None
 
-    async def wrap_task(idx, url):
-        result = await pdf_read(url)
-        return idx, result
+    # 读取图片的内容
+    async def image_to_text(idx, url):
+        read_result = await image_read(url)
+        return idx, read_result
 
-    # 创建任务
-    tasks = [asyncio.create_task(wrap_task(i, url)) for i, url in enumerate(image_results)]
+    # 创建任务以及索引
+    tasks = []
+    for i, url in enumerate(image_results):
+        task = asyncio.create_task(image_to_text(i, url))
+        tasks.append(task)
 
-    for fut in asyncio.as_completed(tasks):
-        idx, result = await fut
-        pdf_texts[idx] = result
+    for image_content in asyncio.as_completed(tasks):
+        idx, read_result = await image_content
+        brief_content[idx] = read_result
 
         completed_count += 1
         print(f"进度: {completed_count}/{page_count} 页完成")
 
-        # 前 5 页完成后启动分类
-        count = min(5, page_count)
-        if production_task is None and all(pdf_texts[:count]):
-            production_content = "".join(pdf_texts[:count])
-            production_task = asyncio.create_task(llm(production_content, pr.prompt_production))
-            print("开始并行解析产品品类...")
+    # 拼接字符串
+    content_parts = []
+    for i in range(page_count):
+        if brief_content[i] is not None:
+            content_parts.append(f"============第{i + 1}页============\n{brief_content[i]}")
+    content = "\n".join(content_parts)
 
-        # 等待分类任务
-        product_result = await production_task if production_task else "005"
+    # with open("F:\\brief_interpret-main\\test\\test_content.txt","r+",encoding="utf-8") as pd:
+    #     pd.write(content)
 
-    match = re.search(r"\b(00[0-8])\b", product_result)
-    if match:
-        product_result = match.group(1).strip()
-    else:
-        print(f"未匹配到产品品类，使用默认值005")
-        product_result = "005"
-    print(f"产品的品类：{product_result}")
-
-    # 拼接完整内容
-    content = "".join(pdf_texts[:page_count])
     content = (
         "最终输出 **必须为 JSON 格式**，且不能修改键值"
         + content +
         "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！"
     )
+
     print("已经成功读取全部内容！")
 
-    return [content, product_result, page_count]
+    return content

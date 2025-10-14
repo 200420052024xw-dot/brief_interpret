@@ -7,7 +7,7 @@ client = AsyncArk(
 )
 
 
-async def pdf_read(image_url, model="doubao-seed-1-6-flash-250828"):
+async def image_read(image_url, model="doubao-seed-1-6-flash-250828"):
     """
     使用火山引擎AsyncArk接口提取图片中的文字内容
 

@@ -7,6 +7,8 @@ def save_file(file_path):
     file_folder = "./Document"
     os.makedirs(file_folder, exist_ok=True)
 
+    file_type = os.path.splitext(file_path)[1].lower().split(".")[1]
+
     # 判断是否是 URL
     if file_path.startswith("http://") or file_path.startswith("https://"):
         response = requests.get(file_path, stream=True)
@@ -33,6 +35,5 @@ def save_file(file_path):
     # 本地文件不存在报错
     elif not os.path.exists(file_path):
         raise FileNotFoundError(f"文件不存在: {file_path}")
-
 
     return file_path,file_type

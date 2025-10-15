@@ -1,8 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
+from openpyxl.styles import Alignment
+from openpyxl import load_workbook
 from PIL import Image
 import subprocess
 import platform
 import shutil
+import time
 import base64
 import fitz
 import os
@@ -126,16 +129,27 @@ def word_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
 # ============================================================
 # Excel → 图片
 # ============================================================
-
 def excel_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     os.makedirs(output_dir, exist_ok=True)
     libre_cmd = get_libreoffice_cmd()
     base_name = os.path.splitext(os.path.basename(input_file))[0]
     output_pdf = os.path.join(output_dir, base_name + ".pdf")
 
+    #将excel文件内容自动换行
+    print("🔧 正在格式化 Excel 文件...")
+    ex = load_workbook(input_file)
+    for ws in ex.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.value is not None:
+                    cell.alignment = Alignment(wrap_text=True)
+    ex.save(input_file)
+
     subprocess.run([libre_cmd, "--headless", "--convert-to", "pdf",
                     input_file, "--outdir", output_dir], check=True)
 
+
+    time.sleep(1.0)
     print("已经成功转化为pdf！")
 
     return pdf_to_url(output_pdf, max_work)

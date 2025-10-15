@@ -1,7 +1,7 @@
-from tool.delete_file_image import clean_images, clean_file
-from tool.url_to_file import save_file
-from tool.url_to_text import url_to_text
-from tool.text_process import safe_json_loads,data_cleaning
+from service.tool import clean_images, clean_file
+from service.url_to_file import save_file
+from service.url_to_text import url_to_text
+from service.tool import safe_json_loads,data_cleaning
 from API.text_doubao import llm_json,llm
 from pydantic import BaseModel
 from fastapi import FastAPI
@@ -89,7 +89,7 @@ async def file_interpret(user: FileInformation):
         "create_elegance": file_collate_elegance
     }
 
-    # 清理临时文件
+    # # 清理临时文件
     clean_images("Images")
     clean_file("./Document")
 

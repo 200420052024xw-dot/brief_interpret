@@ -1,6 +1,9 @@
+from API.text_doubao import llm_json_again
 import shutil
 import glob
+import json
 import os
+import re
 
 # 删除图片
 def clean_images(folder: str = "./"):
@@ -27,6 +30,30 @@ def clean_file(folder_path: str):
                 print(f"已删除文件夹: {file_path}")
         except Exception as e:
             print(f"删除失败 {file_path}: {e}")
+
+# 安全解析JSON并在失败时重试
+async def safe_json_loads(data: str, retry_prompt, label: str):
+    try:
+        json_result = json.loads(data)
+        print(f"{label} 转换成功")
+        return json_result
+    except json.JSONDecodeError:
+        print(f"{label} 转换失败，正在重新尝试！")
+        json_again = llm_json_again(data, retry_prompt)
+        json_result = json.loads(json_again)
+        print(f"{label} 转换尝试结束！")
+        return json_result
+
+# 数字提取
+def data_cleaning(content,clean_rule,default_value):
+    match = re.search(clean_rule, content)
+    if match:
+        clean_result = match.group(1).strip()
+    else:
+        print(f"未匹配相关信息，使用默认值{default_value}")
+        clean_result = default_value
+    return clean_result
+
 
 
 

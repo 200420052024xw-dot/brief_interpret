@@ -30,7 +30,7 @@ def save_file(file_path):
             for chunk in response.iter_content(chunk_size=8192):
                 tmp_file.write(chunk)
         file_path = tmp_path
-        print("已经成功保存文件！")
+        print(f"已经成功保存文件:{filename}！")
 
     # 本地文件不存在报错
     elif not os.path.exists(file_path):

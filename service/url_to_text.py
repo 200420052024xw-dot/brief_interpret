@@ -1,6 +1,6 @@
 import asyncio
 from API.vision_doubao import image_read
-from tool.file_to_url import pdf_to_url, ppt_to_url, word_to_url, excel_to_url
+from service.file_to_url import pdf_to_url, ppt_to_url, word_to_url, excel_to_url
 
 
 async def url_to_text(file_path, file_type, max_work=10):
@@ -48,6 +48,7 @@ async def url_to_text(file_path, file_type, max_work=10):
             content_parts.append(f"============第{i + 1}页============\n{brief_content[i]}")
     content = "\n".join(content_parts)
 
+    # 保存brief内容测试用
     # with open("F:\\brief_interpret-main\\test\\test_content.txt","r+",encoding="utf-8") as pd:
     #     pd.write(content)
 

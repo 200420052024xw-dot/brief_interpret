@@ -1,4 +1,0 @@
-production_information="""
-
-
-"""

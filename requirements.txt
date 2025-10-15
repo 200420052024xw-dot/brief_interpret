@@ -5,7 +5,7 @@ pydantic==2.11.9
 
 # AI模型相关
 openai==2.0.1
-volcenginesdkarkruntime==1.0.0
+volcengine-python-sdk[ark]
 
 # 文档处理
 

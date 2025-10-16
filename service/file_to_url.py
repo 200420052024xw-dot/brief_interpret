@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from log.core.logger import get_logger
 from openpyxl.styles import Alignment
 from openpyxl import load_workbook
 from PIL import Image
@@ -10,12 +11,13 @@ import base64
 import fitz
 import os
 
+logger=get_logger()
+
 # 将图片文件转为 data URL
 def image_to_data_url(image_path: str, mime_type: str = "image/png") -> str:
     with open(image_path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
     return f"data:{mime_type};base64,{b64}"
-
 
 def get_libreoffice_cmd():
     """
@@ -29,22 +31,22 @@ def get_libreoffice_cmd():
         # 手动指定 Windows 下 LibreOffice 路径
         win_path = r"E:\program\soffice.exe"  # 修改为你实际安装路径
         if os.path.exists(win_path):
-            print(f"使用 Windows LibreOffice 路径: {win_path}")
+            logger.info(f"使用 Windows LibreOffice 路径: {win_path}")
             return win_path
         else:
+            logger.error(f"Windows 下未找到 LibreOffice，请检查路径: {win_path}")
             raise EnvironmentError(f"Windows 下未找到 LibreOffice，请检查路径: {win_path}")
 
     elif "linux" in system or "darwin" in system:
         # Linux 或 macOS，从 PATH 查找
         for cmd in ["libreoffice", "soffice"]:
             if shutil.which(cmd):
-                print(f"使用 Linux/macOS LibreOffice 命令: {cmd}")
+                logger.info(f"使用 Linux LibreOffice 命令: {cmd}")
                 return cmd
         raise EnvironmentError(
             "Linux/macOS 下未检测到 LibreOffice，请安装：\n"
             "sudo apt install libreoffice -y"
         )
-
     else:
         raise EnvironmentError(f"无法识别操作系统: {system}")
 
@@ -64,10 +66,10 @@ def pdf_to_image(pdf_path, page_number, output_dir="Images", dpi=100, quality=75
     img = Image.frombytes(mode, (pix.width, pix.height), pix.samples)
     img = img.convert("RGB")  # 确保是 JPEG 可用模式
     img.save(image_path, format="JPEG", quality=quality, optimize=True)
-    print(f"已经成功转化图片: 第 {page_number + 1} 页")
+    logger.debug(f"已经成功转化图片: 第 {page_number + 1} 页")
 
     image_url = image_to_data_url(image_path, mime_type="image/jpeg")
-    print(f"已经成功转化为 url: 第 {page_number + 1} 页")
+    logger.debug(f"已经成功转化为 url: 第 {page_number + 1} 页")
 
     return image_url
 
@@ -78,7 +80,7 @@ def pdf_to_url(pdf_path, max_work=10, dpi=100):
     # 获取 PDF 页数
     pdf = fitz.open(pdf_path)
     page_count = pdf.page_count
-    print(f"PDF共有: {page_count} 页")
+    logger.info(f"PDF共有: {page_count} 页")
 
     # 并行处理每页,转化成图片
     images_url = [None] * page_count
@@ -103,7 +105,7 @@ def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     subprocess.run([libre_cmd, "--headless", "--convert-to", "pdf",
                     input_file, "--outdir", output_dir], check=True)
 
-    print("已经成功转化为pdf！")
+    logger.info("已经成功转化为pdf！")
 
     return pdf_to_url(output_pdf, max_work)
 
@@ -121,7 +123,7 @@ def word_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     subprocess.run([libre_cmd, "--headless", "--convert-to", "pdf",
                     input_file, "--outdir", output_dir], check=True)
 
-    print("已经成功转化为pdf！")
+    logger.info("已经成功转化为pdf！")
 
     return pdf_to_url(output_pdf, max_work)
 
@@ -136,7 +138,7 @@ def excel_to_url(input_file: str, max_work: int, output_dir: str = "./Document")
     output_pdf = os.path.join(output_dir, base_name + ".pdf")
 
     #将excel文件内容自动换行
-    print("🔧 正在格式化 Excel 文件...")
+    logger.info("🔧 正在格式化 Excel 文件...")
     ex = load_workbook(input_file)
     for ws in ex.worksheets:
         for row in ws.iter_rows():
@@ -150,7 +152,7 @@ def excel_to_url(input_file: str, max_work: int, output_dir: str = "./Document")
 
 
     time.sleep(1.0)
-    print("已经成功转化为pdf！")
+    logger.info("已经成功转化为pdf！")
 
     return pdf_to_url(output_pdf, max_work)
 

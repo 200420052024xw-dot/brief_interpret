@@ -1,6 +1,9 @@
+from log.core.logger import get_logger
 import requests
 import hashlib
 import os
+
+logger = get_logger()
 
 def save_file(file_path):
     # 确保Document文件夹存在
@@ -14,11 +17,11 @@ def save_file(file_path):
         response = requests.get(file_path, stream=True)
 
         if response.status_code != 200:
+            logger.error(f"无法下载文件: {file_path}", exc_info=True)
             raise FileNotFoundError(f"无法下载文件: {file_path}")
 
         # 获取文件类型
         file_type = os.path.splitext(file_path)[1].lower().split(".")[1]
-        print(f"文件类型：{file_type}")
 
         # 使用 URL 的 MD5 生成安全文件名
         url_hash = hashlib.md5(file_path.encode("utf-8")).hexdigest()
@@ -30,10 +33,11 @@ def save_file(file_path):
             for chunk in response.iter_content(chunk_size=8192):
                 tmp_file.write(chunk)
         file_path = tmp_path
-        print(f"已经成功保存文件:{filename}！")
+        logger.info(f"已经成功保存文件:{filename}！")
 
     # 本地文件不存在报错
     elif not os.path.exists(file_path):
+        logger.error(f"文件不存在: {file_path}")
         raise FileNotFoundError(f"文件不存在: {file_path}")
 
     return file_path,file_type

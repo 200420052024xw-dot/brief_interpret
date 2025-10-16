@@ -3,6 +3,7 @@ from service.url_to_file import save_file
 from service.url_to_text import url_to_text
 from service.tool import safe_json_loads,data_cleaning
 from API.text_doubao import llm_json,llm
+from log.core.logger import get_logger
 from pydantic import BaseModel
 from fastapi import FastAPI
 import prompt.prompt as pr
@@ -11,6 +12,8 @@ import uvicorn
 import os
 
 app = FastAPI()
+
+logger = get_logger()
 
 class FileInformation(BaseModel):
     file_path: str
@@ -26,22 +29,23 @@ async def file_interpret(user: FileInformation):
         2 -> 创作模式
         3 -> 全模式（选号+创作）
     """
+    logger.info(f"收到文件解读请求: {user.file_path}, 模式: {user.interpret_mode}),程序开始运行......")
+
     file_path, file_type = save_file(user.file_path)
-    print(f"文件类型：{file_type}")
+    logger.info(f"Brief文件类型：{file_type}")
 
     if file_type == "txt":
         with open(file_path, "r", encoding="utf-8") as txt:
             content = txt.read()
         file_collate_type = llm(content, pr.prompt_production)
-        print(f"产品品类：{file_collate_type}")
     else:
         content = await url_to_text(file_path, file_type, user.max_work)
 
     if file_type in ["xls", "xlsx"]:
-        print(content)
+        logger.info(f"EXCEL的解读结果:\n{content}")
 
     # 按照格式提取字段
-    print("============================================开始解析Brief============================================")
+    logger.info("========================开始解析Brief========================")
 
     file_collate_selection = file_collate_create = file_collate_elegance = file_collate_type = None
 
@@ -69,10 +73,10 @@ async def file_interpret(user: FileInformation):
         file_collate_elegance = data_cleaning(file_collate_elegance,r"\b(00[0-1])\b","001")
         file_collate_type = data_cleaning(file_collate_type,r"\b(00[0-8])\b","005")
 
-    print(f"解读选号需求结果:{file_collate_selection}")
-    print(f"解读内容创作结果:{file_collate_create}")
-    print(f"产品品类:{file_collate_type}")
-    print(f"排版要求:{file_collate_elegance}")
+    logger.info(f"选号需求解读结果:{file_collate_selection}")
+    logger.info(f"内容创作解读结果:{file_collate_create}")
+    logger.info(f"产品品类:{file_collate_type}")
+    logger.info(f"排版要求:{file_collate_elegance}")
 
     # 转化为json格式
     if file_collate_selection is not None:

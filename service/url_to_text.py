@@ -61,7 +61,8 @@ async def url_to_text(file_path, file_type, max_work=10):
         "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！"
     )
 
-    logger.info(f"Brief处理结果:{content}!")
+    if not content or not content.strip():
+        logger.error("Brief提取的文字内容为空！")
 
     logger.info("Brief文字提取全部完成!")
 

@@ -5,7 +5,7 @@ pydantic==2.11.9
 
 # AI模型相关
 openai==2.0.1
-volcengine-python-sdk[ark]
+dotenv==1.0.0
 
 # 文档处理
 
@@ -20,3 +20,4 @@ requests==2.32.5
 
 # 其他工具
 python-multipart==0.0.12
+colorama==0.4.6

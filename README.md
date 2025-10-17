@@ -21,15 +21,16 @@ brief_interpret/
   ├─ API/
   │  ├─ text_doubao.py         # 豆包文本模型调用
   │  └─ vision_doubao.py       # 豆包视觉模型调用
-  ├─ tool/
+  ├─ service/
   │  ├─ file_to_url.py         # 文档转图片并生成 Data URL
   │  ├─ url_to_file.py         # 文件下载和保存
   │  ├─ url_to_text.py         # 并行调用视觉模型提取文字
-  │  └─ delete_file_image.py   # 清理临时文件和图片
+  │  └─ tool.py                # 工具函数（清理文件、JSON解析等）
+  ├─ log/
+  │  └─ core/
+  │     └─ logger.py           # 日志配置
   ├─ prompt/
-  │  ├─ prompt.py              # 提示词模板
-  │  ├─ prompt_selection.txt   # 选号需求提示词
-  │  └─ prompt_create          # 创作需求提示词
+  │  └─ prompt.py              # 提示词模板
   ├─ Document/                 # 临时文档存储目录
   ├─ Images/                   # 临时图片缓存目录
   ├─ main.py                   # FastAPI 服务入口
@@ -76,18 +77,22 @@ brew install libreoffice  # macOS
 
 ## API 配置
 
-### 豆包 API 配置
-项目使用火山方舟（Volcengine Ark）豆包模型，需要在以下文件中配置 API Key：
-- `API/text_doubao.py`
-- `API/vision_doubao.py`
+### 环境变量配置
+项目使用 `.env` 文件管理环境变量，需要创建并配置以下内容：
 
-请将文件中的 `api_key="..."` 替换为你自己的火山方舟 API Key：
+1. 在项目根目录创建 `.env` 文件
+2. 添加以下配置（替换为你的实际值）：
 
-```python
-client = OpenAI(
-    base_url="https://ark.cn-beijing.volces.com/api/v3",
-    api_key="<替换为你的 API Key>"
-)
+```
+# 文本模型配置
+TEXT_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+TEXT_API_KEY=你的火山方舟API密钥
+TEXT_MODEL=doubao-seed-1-6-flash-250828
+
+# 视觉模型配置（如需要）
+VISION_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+VISION_API_KEY=你的火山方舟API密钥
+VISION_MODEL=doubao-seed-1-6-flash-250828
 ```
 
 ### 使用的模型
@@ -95,10 +100,10 @@ client = OpenAI(
 - **文本分析**：`doubao-seed-1-6-flash-250828`
 
 ### 安全建议
-> **重要**：当前代码中 API Key 为明文存储，仅用于演示。生产环境中建议：
-> 1. 使用环境变量存储 API Key
-> 2. 避免将包含 API Key 的代码提交到公共仓库
-> 3. 定期轮换 API Key
+> **重要**：
+> 1. 确保 `.env` 文件已添加到 `.gitignore` 中，避免将 API Key 提交到公共仓库
+> 2. 生产环境中可考虑使用更安全的密钥管理方案
+> 3. 定期轮换 API 密钥以提高安全性
 
 ## 启动服务
 
@@ -107,6 +112,8 @@ python main.py
 ```
 
 服务启动后默认监听：`http://0.0.0.0:8845`
+
+> **注意**：端口配置可以在 `main.py` 文件中修改
 
 ## API 接口
 
@@ -117,7 +124,11 @@ python main.py
 - `file_path`（string，必填）：文档文件路径或 URL
   - 支持本地文件路径：`C:/path/to/document.pdf`
   - 支持 HTTP/HTTPS URL：`https://example.com/document.pdf`
-- `max_work`（int，可选）：并行处理线程数，默认 3
+- `interpret_mode`（string，可选）：解读模式，默认 "我没招了"
+  - `"001"`：选号模式（提取选号需求和排版要求）
+  - `"002"`：创作模式（提取创作需求）
+  - 其他值：全模式（提取选号需求、创作需求和排版要求）
+- `max_work`（int，可选）：并行处理线程数，默认 5
 
 #### 支持的文件格式
 - PDF 文件（.pdf）
@@ -176,20 +187,20 @@ print(result)
 
 ## 工作流程
 
-1. **文件处理**：`tool/url_to_file.py` 处理输入文件（本地文件或 URL 下载）
-2. **格式转换**：`tool/file_to_url.py` 将文档转换为图片格式
+1. **文件处理**：`service/url_to_file.py` 处理输入文件（本地文件或 URL 下载）
+2. **格式转换**：`service/file_to_url.py` 将文档转换为图片格式
    - PDF：使用 PyMuPDF 逐页渲染为图片
    - Word：转换为图片或直接读取文本
-   - Excel：Windows 使用 excel2img，Linux/macOS 使用 LibreOffice
-   - PPT：使用 Aspose.Slides 转换为 PDF 再转图片
-3. **文字识别**：`tool/url_to_text.py` 并行调用豆包视觉模型提取文字内容
+   - Excel：使用 LibreOffice 转换（Windows和Linux/macOS通用）
+   - PPT：转换为PDF再转图片
+3. **文字识别**：`service/url_to_text.py` 并行调用豆包视觉模型提取文字内容
 4. **智能分析**：`API/text_doubao.py` 使用豆包文本模型进行结构化分析
    - 产品品类识别
    - 选号需求分析
    - 创作需求提取
    - 排版风格判断
 5. **结果返回**：返回标准化的 JSON 格式分析结果
-6. **清理资源**：`tool/delete_file_image.py` 清理临时文件和图片
+6. **清理资源**：`service/tool.py` 清理临时文件和图片
 
 ## 性能优化建议
 

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 import prompt.prompt as pr
 import asyncio
 import uvicorn
+import time
 import os
 
 app = FastAPI()
@@ -29,6 +30,8 @@ async def file_interpret(user: FileInformation):
         2 -> 创作模式
         3 -> 全模式（选号+创作）
     """
+    start = time.perf_counter()
+
     logger.info(f"收到文件解读请求: {user.file_path}, 模式: {user.interpret_mode}),程序开始运行......")
 
     file_path, file_type = save_file(user.file_path)
@@ -97,8 +100,10 @@ async def file_interpret(user: FileInformation):
     clean_images("Images")
     clean_file("./Document")
 
-    return result
+    end = time.perf_counter()
+    logger.info(f"运行时间: {end - start:.8f} 秒")
 
+    return result
 
 
 if __name__ == '__main__':

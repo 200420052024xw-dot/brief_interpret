@@ -44,14 +44,15 @@ async def file_interpret(user: FileInformation):
         file_collate_type = llm(content, pr.prompt_production)
     else:
         content = await url_to_text(file_path, file_type, user.max_work)
+        file_collate_type = None
 
-    if file_type in ["xls", "xlsx"]:
-        logger.info(f"EXCEL的解读结果:\n{content}")
+    if file_type in ["xls", "xlsx","ppt","pptx","doc","docx"]:
+        logger.info(f"{file_type}的解读结果:\n{content}")
 
     # 按照格式提取字段
     logger.info("========================开始解析Brief========================")
 
-    file_collate_selection = file_collate_create = file_collate_elegance = file_collate_type = None
+    file_collate_selection = file_collate_create = file_collate_elegance =  None
 
     if user.interpret_mode == "001":
         file_collate_selection, file_collate_elegance,file_collate_type = await asyncio.gather(

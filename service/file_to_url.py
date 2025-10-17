@@ -38,17 +38,39 @@ def get_libreoffice_cmd():
             raise EnvironmentError(f"Windows 下未找到 LibreOffice，请检查路径: {win_path}")
 
     elif "linux" in system or "darwin" in system:
-        # Linux 或 macOS，从 PATH 查找
         for cmd in ["libreoffice", "soffice"]:
             if shutil.which(cmd):
-                logger.info(f"使用 Linux LibreOffice 命令: {cmd}")
+                logger.info(f"使用 LibreOffice 命令: {cmd}")
+
+                # 只在第一次运行时刷新字体缓存
+                if not hasattr(get_libreoffice_cmd, "_fc_cache_done"):
+                    logger.info("🔄 正在刷新字体缓存 (fc-cache -fv)...")
+                    subprocess.run(["fc-cache", "-fv"], check=False)
+
+                    # 只输出常用中文字体
+                    common_cn_fonts = ["SimSun", "NSimSun", "Microsoft YaHei", "Microsoft JhengHei",
+                                       "FangSong", "KaiTi", "SimHei", "WenQuanYi", "Source Han Serif", "Source Han Sans"]
+
+                    logger.info("📋 系统可用中文字体：")
+                    result = subprocess.run(["fc-list", ":family"], capture_output=True, text=True)
+                    fonts = sorted(set(result.stdout.split("\n")))
+                    for f in fonts:
+                        if f.strip() and any(cn_font in f for cn_font in common_cn_fonts):
+                            logger.info(f"  - {f.strip()}")
+
+                    # 标记已经执行过
+                    get_libreoffice_cmd._fc_cache_done = True
+
                 return cmd
+
         raise EnvironmentError(
             "Linux/macOS 下未检测到 LibreOffice，请安装：\n"
             "sudo apt install libreoffice -y"
         )
+
     else:
         raise EnvironmentError(f"无法识别操作系统: {system}")
+
 
 # 将单页 PDF 转为图片并返回 data URL
 def pdf_to_image(pdf_path, page_number, output_dir="Images", dpi=100, quality=75):
@@ -98,6 +120,7 @@ def pdf_to_url(pdf_path, max_work=10, dpi=100):
 
 def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     start_time = time.perf_counter()
+
 
     os.makedirs(output_dir, exist_ok=True)
     libre_cmd = get_libreoffice_cmd()

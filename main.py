@@ -96,9 +96,9 @@ async def file_interpret(user: FileInformation):
         "create_elegance": file_collate_elegance
     }
 
-    # # 清理临时文件
-    clean_images("Images")
-    clean_file("./Document")
+    # 清理临时文件
+    # clean_images("Images")
+    # clean_file("./Document")
 
     end = time.perf_counter()
     logger.info(f"运行时间: {end - start:.8f} 秒")

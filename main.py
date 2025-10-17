@@ -2,6 +2,7 @@ from service.tool import clean_images, clean_file
 from service.url_to_file import save_file
 from service.url_to_text import url_to_text
 from service.tool import safe_json_loads,data_cleaning
+from service.tool import llm_time
 from API.text_doubao import llm_json,llm
 from log.core.logger import get_logger
 from pydantic import BaseModel
@@ -30,7 +31,7 @@ async def file_interpret(user: FileInformation):
         2 -> 创作模式
         3 -> 全模式（选号+创作）
     """
-    start = time.perf_counter()
+    start_time = time.perf_counter()
 
     logger.info(f"收到文件解读请求: {user.file_path}, 模式: {user.interpret_mode}),程序开始运行......")
 
@@ -54,23 +55,23 @@ async def file_interpret(user: FileInformation):
 
     if user.interpret_mode == "001":
         file_collate_selection, file_collate_elegance,file_collate_type = await asyncio.gather(
-            llm_json(content, pr.prompt_selection),
-            llm(content, pr.prompt_elegance),
-            llm(content[:1000],pr.prompt_production)
+            llm_time(llm_json,content, pr.prompt_selection,"解读选号需求"),
+            llm_time(llm,content, pr.prompt_elegance,"解读排版要求"),
+            llm_time(llm,content[:1000],pr.prompt_production,"解读产品品类")
         )
         # 数据清洗
         file_collate_elegance = data_cleaning(file_collate_elegance,r"\b(00[0-1])\b","001")
         file_collate_type = data_cleaning(file_collate_type,r"\b(00[0-8])\b","005")
 
     elif user.interpret_mode == "002":
-        file_collate_create = await llm_json(content, pr.prompt_create)
+        file_collate_create = await llm_time(llm_json,content,pr.prompt_create,"解读创作要求")
 
     else:
         file_collate_selection, file_collate_create, file_collate_elegance , file_collate_type= await asyncio.gather(
-            llm_json(content, pr.prompt_selection),
-            llm_json(content, pr.prompt_create),
-            llm(content, pr.prompt_elegance),
-            llm(content[:1000],pr.prompt_production)
+            llm_time(llm_json, content, pr.prompt_selection, "解读选号需求"),
+            llm_time(llm_json, content, pr.prompt_create, "解读创作要求"),
+            llm_time(llm, content, pr.prompt_elegance, "解读排版要求"),
+            llm_time(llm, content[:1000], pr.prompt_production, "解读产品品类")
         )
         # 数据清洗
         file_collate_elegance = data_cleaning(file_collate_elegance,r"\b(00[0-1])\b","001")
@@ -97,11 +98,11 @@ async def file_interpret(user: FileInformation):
     }
 
     # 清理临时文件
-    # clean_images("Images")
-    # clean_file("./Document")
+    clean_images("Images")
+    clean_file("./Document")
 
-    end = time.perf_counter()
-    logger.info(f"运行时间: {end - start:.8f} 秒")
+    end_time = time.perf_counter()
+    logger.info(f"总计运行时间: {end_time - start_time:.8f} 秒")
 
     return result
 

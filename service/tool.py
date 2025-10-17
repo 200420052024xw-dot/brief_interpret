@@ -1,6 +1,7 @@
 from log.core.logger import get_logger
 from API.text_doubao import llm_json_again
 import shutil
+import time
 import glob
 import json
 import os
@@ -62,6 +63,14 @@ def data_cleaning(content,clean_rule,default_value):
         logger.warning(f"未匹配相关信息，使用默认值{default_value}")
         clean_result = default_value
     return clean_result
+
+async def llm_time(function_name,content,prompt,name):
+    start_time = time.perf_counter()
+    result = await function_name(content,prompt)
+    end_time = time.perf_counter()
+    elapsed =  end_time - start_time
+    logger.info(f"{name}处理耗时: {elapsed:.2f} 秒")
+    return result
 
 
 

@@ -97,6 +97,8 @@ def pdf_to_url(pdf_path, max_work=10, dpi=100):
 # ============================================================
 
 def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
+    start_time = time.perf_counter()
+
     os.makedirs(output_dir, exist_ok=True)
     libre_cmd = get_libreoffice_cmd()
     base_name = os.path.splitext(os.path.basename(input_file))[0]
@@ -105,7 +107,9 @@ def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     subprocess.run([libre_cmd, "--headless", "--convert-to", "pdf",
                     input_file, "--outdir", output_dir], check=True)
 
-    logger.info("已经成功转化为pdf！")
+    end_time = time.perf_counter()
+    elapsed = end_time - start_time
+    logger.info(f"已经成功转化为pdf,耗时{elapsed:.2f}秒!")
 
     return pdf_to_url(output_pdf, max_work)
 
@@ -115,6 +119,8 @@ def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
 # ============================================================
 
 def word_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
+    start_time = time.perf_counter()
+
     os.makedirs(output_dir, exist_ok=True)
     libre_cmd = get_libreoffice_cmd()
     base_name = os.path.splitext(os.path.basename(input_file))[0]
@@ -123,7 +129,9 @@ def word_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     subprocess.run([libre_cmd, "--headless", "--convert-to", "pdf",
                     input_file, "--outdir", output_dir], check=True)
 
-    logger.info("已经成功转化为pdf！")
+    end_time = time.perf_counter()
+    elapsed = end_time - start_time
+    logger.info(f"已经成功转化为pdf,耗时{elapsed:.2f}秒!")
 
     return pdf_to_url(output_pdf, max_work)
 
@@ -132,6 +140,8 @@ def word_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
 # Excel → 图片
 # ============================================================
 def excel_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
+    start_time = time.perf_counter()
+
     os.makedirs(output_dir, exist_ok=True)
     libre_cmd = get_libreoffice_cmd()
     base_name = os.path.splitext(os.path.basename(input_file))[0]
@@ -150,9 +160,9 @@ def excel_to_url(input_file: str, max_work: int, output_dir: str = "./Document")
     subprocess.run([libre_cmd, "--headless", "--convert-to", "pdf",
                     input_file, "--outdir", output_dir], check=True)
 
-
-    time.sleep(1.0)
-    logger.info("已经成功转化为pdf！")
+    end_time = time.perf_counter()
+    elapsed = end_time - start_time
+    logger.info(f"已经成功转化为pdf,耗时{elapsed:.2f}秒!")
 
     return pdf_to_url(output_pdf, max_work)
 

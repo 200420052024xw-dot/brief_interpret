@@ -1,7 +1,8 @@
-import asyncio
-from API.vision_doubao import image_read
 from service.file_to_url import pdf_to_url, ppt_to_url, word_to_url, excel_to_url
+from API.vision_doubao import image_read
 from log.core.logger import get_logger
+import asyncio
+import time
 
 logger=get_logger()
 
@@ -28,9 +29,13 @@ async def url_to_text(file_path, file_type, max_work=10):
 
     # 读取图片的内容
     async def image_to_text(idx, url):
+        start_time = time.perf_counter()
         read_result = await image_read(url)
-        return idx, read_result
+        end_time = time.perf_counter()
+        elapsed = end_time - start_time
+        return idx, read_result,elapsed
 
+    overall_start = time.perf_counter()
     # 创建任务以及索引
     tasks = []
     for i, url in enumerate(image_results):
@@ -38,11 +43,15 @@ async def url_to_text(file_path, file_type, max_work=10):
         tasks.append(task)
 
     for image_content in asyncio.as_completed(tasks):
-        idx, read_result = await image_content
+        idx, read_result,elapsed = await image_content
         brief_content[idx] = read_result
 
         completed_count += 1
-        logger.debug(f"进度: {completed_count}/{page_count} 页完成")
+        logger.info(f"进度: {completed_count}/{page_count} 页完成,耗时{elapsed:.3f}秒")
+
+    overall_end = time.perf_counter()
+
+    overall_time = overall_end - overall_start
 
     # 拼接字符串
     content_parts = []
@@ -60,6 +69,8 @@ async def url_to_text(file_path, file_type, max_work=10):
         + content +
         "最终输出 **必须为 JSON 格式**，JSON 的键值需按照上述格式结构展开，不能修改键值！"
     )
+
+    logger.info(f"模型读取总耗时: {overall_time:.2f} 秒")
 
     if not content or not content.strip():
         logger.error("Brief提取的文字内容为空！")

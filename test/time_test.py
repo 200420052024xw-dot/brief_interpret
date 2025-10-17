@@ -40,7 +40,8 @@ if __name__ == '__main__':
     num_calls = 10
     times = []
 
-    image_url = image_to_data_url("Images/page_16.jpg")
+    image_url = image_to_data_url("../Images/page_16.jpg")
+    print(image_url)
 
     for i in range(num_calls):
         print(f"开始第 {i + 1} 次调用...")

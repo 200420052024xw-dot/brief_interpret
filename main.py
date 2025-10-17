@@ -98,8 +98,8 @@ async def file_interpret(user: FileInformation):
     }
 
     # 清理临时文件
-    clean_images("Images")
-    clean_file("./Document")
+    # clean_images("Images")
+    # clean_file("./Document")
 
     end_time = time.perf_counter()
     logger.info(f"总计运行时间: {end_time - start_time:.8f} 秒")

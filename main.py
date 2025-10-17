@@ -46,8 +46,7 @@ async def file_interpret(user: FileInformation):
         content = await url_to_text(file_path, file_type, user.max_work)
         file_collate_type = None
 
-    if file_type in ["xls", "xlsx","ppt","pptx","doc","docx"]:
-        logger.info(f"{file_type}的解读结果:\n{content}")
+    logger.info(f"{file_type}的解读结果:\n{content}")
 
     # 按照格式提取字段
     logger.info("========================开始解析Brief========================")

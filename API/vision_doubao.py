@@ -29,6 +29,11 @@ async def image_read(image_url):
                     """}
                 ]
             }
-        ]
+        ],
+        thinking = {
+            "type": "disabled"  # 不使用深度思考能力,
+            # "type": "enabled" # 使用深度思考能力
+            # "type": "auto" # 模型自行判断是否使用深度思考能力
+        }
     )
     return completion.choices[0].message.content

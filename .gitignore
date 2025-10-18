@@ -3,3 +3,6 @@
 
 # 不要上传任何备份或环境配置副本
 *.env.*
+
+# 不要上传运行日志
+log/runtime_log/program_running.log

@@ -24,7 +24,7 @@ async def llm_json(content,prompt):
     response = await client.chat.completions.create(
         model=model,
         messages=messages,
-        response_format={"type": "json_object"},
+        # response_format={"type": "json_object"},
         thinking = {
             "type": "disabled"  # 不使用深度思考能力,
             # "type": "enabled" # 使用深度思考能力
@@ -53,14 +53,14 @@ async def llm(content,prompt):
     return response.choices[0].message.content
 
 
-def llm_json_again(content,prompt):
+def llm_json_again(content,prompt,model="doubao-seed-1-6-flash-250828"):
     messages = [
         {"role": "system", "content": prompt},
         {"role": "user", "content": content}, ]
     response = client_together.chat.completions.create(
         model=model,
         messages=messages,
-        response_format={"type": "json_object"},
+        # response_format={"type": "json_object"},
         thinking={
             "type": "disabled"  # 不使用深度思考能力,
             # "type": "enabled" # 使用深度思考能力

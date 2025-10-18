@@ -38,21 +38,24 @@ def clean_file(folder_path: str):
 
 # 安全解析JSON并在失败时重试
 async def safe_json_loads(data: str, retry_prompt, label: str):
+    condition = None
     try:
         json_result = json.loads(data)
         logger.info(f"{label} 转换成功")
-        return json_result
-    except json.JSONDecodeError:
+        return json_result,condition
+    except Exception:
         logger.warning(f"{label} 转换失败，正在重新尝试！", exc_info=True)
         try:
             json_again = llm_json_again(data, retry_prompt)
-            json_result = json.loads(json_again)
+            json_clean = json_again.strip()
+            if json_clean.startswith("```"):
+                json_clean = json_clean.strip("`").replace("json", "", 1).strip()
+            json_result = json.loads(json_clean)
             logger.info(f"{label} 重新转换尝试成功！")
-            return json_result
-        except Exception as e:
+            return json_result,condition
+        except Exception:
             logger.error(f"{label} 重试转换失败", exc_info=True)
-            raise
-
+            return data,condition
 
 # 数字提取
 def data_cleaning(content,clean_rule,default_value):

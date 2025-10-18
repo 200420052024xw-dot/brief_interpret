@@ -51,7 +51,7 @@ async def file_interpret(user: FileInformation):
     # 按照格式提取字段
     logger.info("========================开始解析Brief========================")
 
-    file_collate_selection = file_collate_create = file_collate_elegance =  None
+    file_collate_selection = file_collate_create_direction = file_collate_create_content = file_collate_elegance =  None
 
     if user.interpret_mode == "001":
         file_collate_selection, file_collate_elegance,file_collate_type = await asyncio.gather(
@@ -64,12 +64,15 @@ async def file_interpret(user: FileInformation):
         file_collate_type = data_cleaning(file_collate_type,r"\b(00[0-8])\b","005")
 
     elif user.interpret_mode == "002":
-        file_collate_create = await llm_time(llm_json,content,pr.prompt_create,"解读创作要求")
+        file_collate_create_direction,file_collate_create_content = await asyncio.gather(
+            llm_time(llm_json,content,pr.prompt_create_direction,"解读创作方向"),
+            llm_time(llm_json,content,pr.prompt_create_content,"解读创作要求"))
 
     else:
-        file_collate_selection, file_collate_create, file_collate_elegance , file_collate_type= await asyncio.gather(
+        file_collate_selection, file_collate_create_direction,file_collate_create_content, file_collate_elegance , file_collate_type= await asyncio.gather(
             llm_time(llm_json, content, pr.prompt_selection, "解读选号需求"),
-            llm_time(llm_json, content, pr.prompt_create, "解读创作要求"),
+            llm_time(llm_json, content, pr.prompt_create_direction, "解读创作方向"),
+            llm_time(llm_json, content, pr.prompt_create_content, "解读创作要求"),
             llm_time(llm, content, pr.prompt_elegance, "解读排版要求"),
             llm_time(llm, content[:1000], pr.prompt_production, "解读产品品类")
         )
@@ -78,28 +81,44 @@ async def file_interpret(user: FileInformation):
         file_collate_type = data_cleaning(file_collate_type,r"\b(00[0-8])\b","005")
 
     logger.info(f"选号需求解读结果:{file_collate_selection}")
-    logger.info(f"内容创作解读结果:{file_collate_create}")
+    logger.info(f"创作方向解读结果:{file_collate_create_direction}")
+    logger.info(f"创作要求解读结果:{file_collate_create_content}")
     logger.info(f"产品品类:{file_collate_type}")
     logger.info(f"排版要求:{file_collate_elegance}")
 
     # 转化为json格式
     if file_collate_selection is not None:
-        file_collate_selection = await safe_json_loads(file_collate_selection, pr.prompt_selection_json, "file_collate_selection")
-
-    if file_collate_create is not None:
-        file_collate_create = await safe_json_loads(file_collate_create, pr.prompt_create_json, "file_collate_create")
+        file_collate_selection = await safe_json_loads(file_collate_selection, pr.prompt_fix_json, "file_collate_selection")
+    if file_collate_create_direction is not None and file_collate_create_content is not None:
+        file_collate_create_direction,condition_direction = await safe_json_loads(file_collate_create_direction, pr.prompt_fix_json, "file_collate_create_direction")
+        file_collate_create_content,condition_content = await safe_json_loads(file_collate_create_content, pr.prompt_fix_json, "file_collate_create_content")
+        if isinstance(file_collate_create_direction, dict) and isinstance(file_collate_create_content, dict):
+            logger.info("内容创作部分正常合并")
+            file_collate_create_content["创作方向"] = file_collate_create_direction["创作方向"]
+        elif isinstance(file_collate_create_direction, dict):
+            logger.warning("创作信息json转化失败")
+            file_collate_create_direction["创作信息"] = file_collate_create_content
+            file_collate_create_content = file_collate_create_direction
+        elif isinstance(file_collate_create_content, dict):
+            logger.warning("创作方向json转化失败")
+            file_collate_create_content["创作方向"] = file_collate_create_direction
+        else:
+            logger.warning("内容创作部分json全部转化失败")
+            file_collate_create_content = {
+                "创作要求":file_collate_create_content,
+                "创作方向":file_collate_create_direction}
 
     # 拼接结果
     result = {
         "production_type": file_collate_type,
         "selection_requirements": file_collate_selection,
-        "create_requirements": file_collate_create,
+        "create_requirements": file_collate_create_content,
         "create_elegance": file_collate_elegance
     }
 
     # 清理临时文件
-    # clean_images("Images")
-    # clean_file("./Document")
+    clean_images("./Images")
+    clean_file("./Document")
 
     end_time = time.perf_counter()
     logger.info(f"总计运行时间: {end_time - start_time:.8f} 秒")

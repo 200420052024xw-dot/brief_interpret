@@ -20,47 +20,20 @@ def image_to_data_url(image_path: str, mime_type: str = "image/png") -> str:
     return f"data:{mime_type};base64,{b64}"
 
 def get_libreoffice_cmd():
-    """
-    自动检测 LibreOffice 命令：
-    - Windows：使用手动指定路径
-    - Linux/macOS：从 PATH 查找 soffice 或 libreoffice
-    """
     system = platform.system().lower()
 
     if "windows" in system:
-        # 手动指定 Windows 下 LibreOffice 路径
-        win_path = r"E:\program\soffice.exe"  # 修改为你实际安装路径
+        win_path = r"E:\program\soffice.exe"
         if os.path.exists(win_path):
             logger.info(f"使用 Windows LibreOffice 路径: {win_path}")
             return win_path
         else:
-            logger.error(f"Windows 下未找到 LibreOffice，请检查路径: {win_path}")
             raise EnvironmentError(f"Windows 下未找到 LibreOffice，请检查路径: {win_path}")
 
     elif "linux" in system or "darwin" in system:
         for cmd in ["libreoffice", "soffice"]:
             if shutil.which(cmd):
                 logger.info(f"使用 LibreOffice 命令: {cmd}")
-
-                # 只在第一次运行时刷新字体缓存
-                if not hasattr(get_libreoffice_cmd, "_fc_cache_done"):
-                    logger.info("🔄 正在刷新字体缓存 (fc-cache -fv)...")
-                    subprocess.run(["fc-cache", "-fv"], check=False)
-
-                    # 只输出常用中文字体
-                    common_cn_fonts = ["SimSun", "NSimSun", "Microsoft YaHei", "Microsoft JhengHei",
-                                       "FangSong", "KaiTi", "SimHei", "WenQuanYi", "Source Han Serif", "Source Han Sans"]
-
-                    logger.info("📋 系统可用中文字体：")
-                    result = subprocess.run(["fc-list", ":family"], capture_output=True, text=True)
-                    fonts = sorted(set(result.stdout.split("\n")))
-                    for f in fonts:
-                        if f.strip() and any(cn_font in f for cn_font in common_cn_fonts):
-                            logger.info(f"  - {f.strip()}")
-
-                    # 标记已经执行过
-                    get_libreoffice_cmd._fc_cache_done = True
-
                 return cmd
 
         raise EnvironmentError(
@@ -120,7 +93,6 @@ def pdf_to_url(pdf_path, max_work=10, dpi=100):
 
 def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     start_time = time.perf_counter()
-
 
     os.makedirs(output_dir, exist_ok=True)
     libre_cmd = get_libreoffice_cmd()

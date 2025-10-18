@@ -80,6 +80,7 @@ async def file_interpret(user: FileInformation):
         file_collate_elegance = data_cleaning(file_collate_elegance,r"\b(00[0-1])\b","001")
         file_collate_type = data_cleaning(file_collate_type,r"\b(00[0-8])\b","005")
 
+
     logger.info(f"选号需求解读结果:{file_collate_selection}")
     logger.info(f"创作方向解读结果:{file_collate_create_direction}")
     logger.info(f"创作要求解读结果:{file_collate_create_content}")
@@ -88,7 +89,7 @@ async def file_interpret(user: FileInformation):
 
     # 转化为json格式
     if file_collate_selection is not None:
-        file_collate_selection = await safe_json_loads(file_collate_selection, pr.prompt_fix_json, "file_collate_selection")
+        file_collate_selection,condition = await safe_json_loads(file_collate_selection, pr.prompt_fix_json, "file_collate_selection")
     if file_collate_create_direction is not None and file_collate_create_content is not None:
         file_collate_create_direction,condition_direction = await safe_json_loads(file_collate_create_direction, pr.prompt_fix_json, "file_collate_create_direction")
         file_collate_create_content,condition_content = await safe_json_loads(file_collate_create_content, pr.prompt_fix_json, "file_collate_create_content")
@@ -122,6 +123,7 @@ async def file_interpret(user: FileInformation):
 
     end_time = time.perf_counter()
     logger.info(f"总计运行时间: {end_time - start_time:.8f} 秒")
+
 
     return result
 

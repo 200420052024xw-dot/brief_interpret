@@ -30,7 +30,7 @@ async def llm_json(content,prompt):
             # "type": "enabled" # 使用深度思考能力
             # "type": "auto" # 模型自行判断是否使用深度思考能力
         },
-        temperature = 0.3
+        temperature = 0.1
     )
     return response.choices[0].message.content
 
@@ -48,16 +48,16 @@ async def llm(content,prompt):
             # "type": "enabled" # 使用深度思考能力
             # "type": "auto" # 模型自行判断是否使用深度思考能力
         },
-        temperature = 0.3
+        temperature = 0.2
     )
     return response.choices[0].message.content
 
 
-def llm_json_again(content,prompt,model="doubao-seed-1-6-flash-250828"):
+async def llm_json_again(content,prompt,model="doubao-seed-1-6-flash-250828"):
     messages = [
         {"role": "system", "content": prompt},
         {"role": "user", "content": content}, ]
-    response = client_together.chat.completions.create(
+    response = await  client.chat.completions.create(
         model=model,
         messages=messages,
         # response_format={"type": "json_object"},
@@ -66,6 +66,6 @@ def llm_json_again(content,prompt,model="doubao-seed-1-6-flash-250828"):
             # "type": "enabled" # 使用深度思考能力
             # "type": "auto" # 模型自行判断是否使用深度思考能力
         },
-        temperature=0.3
+        temperature=0.2
     )
     return response.choices[0].message.content

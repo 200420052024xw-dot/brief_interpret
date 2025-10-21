@@ -46,7 +46,7 @@ async def safe_json_loads(data: str, retry_prompt, label: str):
     except Exception:
         logger.warning(f"{label} 转换失败，正在重新尝试！", exc_info=True)
         try:
-            json_again = llm_json_again(data, retry_prompt)
+            json_again = await (llm_json_again(data,retry_prompt))
             json_clean = json_again.strip()
             if json_clean.startswith("```"):
                 json_clean = json_clean.strip("`").replace("json", "", 1).strip()

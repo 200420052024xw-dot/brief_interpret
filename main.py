@@ -1,3 +1,7 @@
+from asyncio import gather
+
+from win32comext.shell.demos.servers.folder_view import tasks
+
 from service.tool import clean_images, clean_file
 from service.url_to_file import save_file
 from service.url_to_text import url_to_text
@@ -91,8 +95,8 @@ async def file_interpret(user: FileInformation):
     if file_collate_selection is not None:
         file_collate_selection,condition = await safe_json_loads(file_collate_selection, pr.prompt_fix_json, "file_collate_selection")
     if file_collate_create_direction is not None and file_collate_create_content is not None:
-        file_collate_create_direction,condition_direction = await safe_json_loads(file_collate_create_direction, pr.prompt_fix_json, "file_collate_create_direction")
-        file_collate_create_content,condition_content = await safe_json_loads(file_collate_create_content, pr.prompt_fix_json, "file_collate_create_content")
+        results = await asyncio.gather(safe_json_loads(file_collate_create_direction, pr.prompt_fix_json, "file_collate_create_direction"),safe_json_loads(file_collate_create_content, pr.prompt_fix_json, "file_collate_create_content"))
+        (file_collate_create_direction, condition_direction), (file_collate_create_content, condition_content) = results
         if isinstance(file_collate_create_direction, dict) and isinstance(file_collate_create_content, dict):
             logger.info("内容创作部分正常合并")
             file_collate_create_content["创作方向"] = file_collate_create_direction["创作方向"]

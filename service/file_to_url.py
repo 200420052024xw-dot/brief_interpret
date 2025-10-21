@@ -86,11 +86,7 @@ def pdf_to_url(pdf_path, max_work=10, dpi=100):
 
     return images_url, page_count
 
-
-# ============================================================
 # PPT → 图片
-# ============================================================
-
 def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     start_time = time.perf_counter()
 
@@ -108,11 +104,7 @@ def ppt_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
 
     return pdf_to_url(output_pdf, max_work)
 
-
-# ============================================================
 # Word → 图片
-# ============================================================
-
 def word_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     start_time = time.perf_counter()
 
@@ -131,9 +123,8 @@ def word_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     return pdf_to_url(output_pdf, max_work)
 
 
-# ============================================================
+
 # Excel → 图片
-# ============================================================
 def excel_to_url(input_file: str, max_work: int, output_dir: str = "./Document"):
     start_time = time.perf_counter()
 

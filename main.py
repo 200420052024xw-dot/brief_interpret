@@ -1,7 +1,3 @@
-from asyncio import gather
-
-from win32comext.shell.demos.servers.folder_view import tasks
-
 from service.tool import clean_images, clean_file
 from service.url_to_file import save_file
 from service.url_to_text import url_to_text

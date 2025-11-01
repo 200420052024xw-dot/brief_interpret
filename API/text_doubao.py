@@ -25,6 +25,7 @@ async def llm_json(content,prompt):
         model=model,
         messages=messages,
         # response_format={"type": "json_object"},
+        max_completion_tokens=32000,
         thinking = {
             "type": "disabled"  # 不使用深度思考能力,
             # "type": "enabled" # 使用深度思考能力
@@ -48,6 +49,7 @@ async def llm(content,prompt):
             # "type": "enabled" # 使用深度思考能力
             # "type": "auto" # 模型自行判断是否使用深度思考能力
         },
+        max_completion_tokens=32000,
         temperature = 0.2
     )
     return response.choices[0].message.content

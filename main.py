@@ -128,4 +128,4 @@ async def file_interpret(user: FileInformation):
 
 
 if __name__ == '__main__':
-    uvicorn.run(f'{os.path.basename(__file__).split(".")[0]}:app', host='0.0.0.0', port=8845, reload=True)
+    uvicorn.run(f'{os.path.basename(__file__).split(".")[0]}:app', host='0.0.0.0', port=8848, reload=True)
